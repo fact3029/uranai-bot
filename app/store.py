@@ -7,6 +7,7 @@ _SCHEMA = """
 CREATE TABLE IF NOT EXISTS usage (user_id TEXT, day TEXT, count INTEGER, PRIMARY KEY (user_id, day));
 CREATE TABLE IF NOT EXISTS members (user_id TEXT PRIMARY KEY, subscription_id TEXT, active INTEGER);
 CREATE TABLE IF NOT EXISTS profiles (user_id TEXT PRIMARY KEY, month INTEGER, day INTEGER);
+CREATE TABLE IF NOT EXISTS draws (id TEXT PRIMARY KEY, user_id TEXT, cards TEXT, question TEXT, text TEXT);
 CREATE TABLE IF NOT EXISTS horoscope_cache (sign TEXT, day TEXT, text TEXT, PRIMARY KEY (sign, day));
 """
 
@@ -70,6 +71,18 @@ class Store:
     def birthday(self, user_id: str) -> tuple[int, int] | None:
         rows = self._q("SELECT month, day FROM profiles WHERE user_id=?", (user_id,))
         return (rows[0][0], rows[0][1]) if rows else None
+
+    # 引いたカード（引く→読むを分けるため保存する）------------------------
+    def save_draw(self, draw_id: str, user_id: str, cards_json: str, question: str) -> None:
+        self._q("INSERT INTO draws VALUES (?,?,?,?,NULL)", (draw_id, user_id, cards_json, question))
+
+    def get_draw(self, draw_id: str, user_id: str) -> tuple[str, str, str | None] | None:
+        """本人の引いた結果だけ返す: (cards_json, question, text)"""
+        rows = self._q("SELECT cards, question, text FROM draws WHERE id=? AND user_id=?", (draw_id, user_id))
+        return rows[0] if rows else None
+
+    def save_reading(self, draw_id: str, text: str) -> None:
+        self._q("UPDATE draws SET text=? WHERE id=?", (text, draw_id))
 
     # 星座占い文のキャッシュ（1日12星座×1回だけAIを呼ぶ）-----------------
     def cached_horoscope(self, sign: str, today: date) -> str | None:

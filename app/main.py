@@ -10,7 +10,7 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from . import billing, line, zodiac
+from . import billing, line, tarot, zodiac
 from .config import settings
 from .service import FortuneService, today_jst
 from .store import Store
@@ -57,15 +57,29 @@ def me(request: Request, response: Response):
         "used": service.store.used_today(uid, today_jst()),
         "limit": service.daily_limit(uid),
         "billing": settings.billing_enabled,
+        "rarities": tarot.RARITIES,
     }
 
 
-@app.post("/api/tarot")
-def api_tarot(body: TarotIn, request: Request, response: Response):
+class ReadIn(BaseModel):
+    draw_id: str = Field(..., max_length=64)
+
+
+@app.post("/api/tarot/draw")
+def api_draw(body: TarotIn, request: Request, response: Response):
+    """カードを引く。AIを待たずにすぐ返すので、画面はすぐガチャ演出に入れる。"""
     if body.count not in (1, 3):
         raise HTTPException(400, "count は 1 か 3")
-    r = service.tarot(web_user(request, response), body.count, body.question)
-    return {"ok": r.ok, "text": r.text, "reason": r.reason, "cards": r.cards}
+    r = service.draw(web_user(request, response), body.count, body.question)
+    return {"ok": r.ok, "text": r.text, "reason": r.reason, "cards": r.cards, "draw_id": r.draw_id}
+
+
+@app.post("/api/tarot/read")
+def api_read(body: ReadIn, request: Request, response: Response):
+    r = service.read(web_user(request, response), body.draw_id)
+    if not r.ok:
+        raise HTTPException(404, r.text)
+    return {"ok": True, "text": r.text, "cards": r.cards}
 
 
 @app.post("/api/horoscope")

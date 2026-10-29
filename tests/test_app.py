@@ -43,6 +43,14 @@ def test_daily_fortune_is_stable_and_ranking_complete():
 
 
 # --- タロット -------------------------------------------------------------
+def test_rarity_rates():
+    assert abs(sum(p for _, p in tarot.RARITIES) - 1) < 1e-9
+    rng = random.Random(0)
+    got = [tarot.roll_rarity(rng) for _ in range(100_000)]
+    for name, p in tarot.RARITIES:
+        assert abs(got.count(name) / len(got) - p) < 0.01
+
+
 def test_draw_unique_cards():
     cards = tarot.draw(3, random.Random(1))
     assert [c.position for c in cards] == ["過去", "現在", "未来"]
@@ -103,14 +111,15 @@ def test_free_limit_and_premium(svc):
     assert not svc.store.is_premium("u1")
 
 
-def test_refund_on_failure(svc):
-    class Broken(FakeClient):
-        pass
-    svc.client = Broken()
-    svc.client.beta.messages.create = lambda **k: (_ for _ in ()).throw(RuntimeError("boom"))
-    with pytest.raises(RuntimeError):
-        svc.tarot("u2")
-    assert svc.store.used_today("u2", today_jst()) == 0
+def test_draw_then_read_is_owner_only_and_cached(svc):
+    d = svc.draw("u2")
+    assert d.ok and d.draw_id and d.cards[0]["rarity"] in ("N", "R", "SR", "SSR", "UR")
+    assert len(svc.client.calls) == 0  # 引くだけではAIを呼ばない
+    assert svc.read("someone_else", d.draw_id).reason == "not_found"
+    first = svc.read("u2", d.draw_id)
+    again = svc.read("u2", d.draw_id)
+    assert first.text == again.text and len(svc.client.calls) == 1
+    assert d.cards[0]["name"] in svc.client.calls[0]["messages"][0]["content"]
 
 
 def test_horoscope_cached_once_per_sign(svc):
@@ -133,7 +142,8 @@ def test_line_commands(svc):
     assert "誕生日を添えて" in line.respond(svc, "U1", "星座")[0]
     assert "おひつじ座" in line.respond(svc, "U1", "星座 3/21")[0]
     assert "おひつじ座" in line.respond(svc, "U1", "星座")[0]  # 登録済みの誕生日を使う
-    assert "鑑定文です" in line.respond(svc, "U1", "タロット")[0]
+    first = line.respond(svc, "U1", "タロット")
+    assert "】今日のあなた:" in first[0] and "鑑定文です" in first[1]
     assert "終わりました" in line.respond(svc, "U1", "タロット")[0]
     replies = line.respond(svc, "U1", "3枚")
     assert "プレミアム" in replies[0] and len(replies) == 2
@@ -148,10 +158,14 @@ def test_web_api():
     c = TestClient(main.app)
     assert c.get("/").status_code == 200
     assert c.get("/api/me").json()["limit"] == 1
-    r = c.post("/api/tarot", json={"count": 1}).json()
-    assert r["ok"] and len(r["cards"]) == 1
-    assert c.post("/api/tarot", json={"count": 1}).json()["reason"] == "limit"
-    assert c.post("/api/tarot", json={"count": 2}).status_code == 400
+    assert len(c.get("/api/me").json()["rarities"]) == 5
+    d = c.post("/api/tarot/draw", json={"count": 1}).json()
+    assert d["ok"] and len(d["cards"]) == 1 and "rarity" in d["cards"][0]
+    r = c.post("/api/tarot/read", json={"draw_id": d["draw_id"]}).json()
+    assert r["ok"] and "鑑定文です" in r["text"]
+    assert c.post("/api/tarot/read", json={"draw_id": "nope"}).status_code == 404
+    assert c.post("/api/tarot/draw", json={"count": 1}).json()["reason"] == "limit"
+    assert c.post("/api/tarot/draw", json={"count": 2}).status_code == 400
     assert c.post("/api/horoscope", json={"birthday": "8/1"}).json()["sign"] == "しし座"
     assert c.post("/api/horoscope", json={"birthday": "abc"}).status_code == 400
     assert c.post("/line/callback", content=b"{}", headers={"x-line-signature": "x"}).status_code == 400

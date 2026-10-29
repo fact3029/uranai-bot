@@ -43,22 +43,30 @@ def reply(reply_token: str, texts: list[str]) -> None:
         log.error("LINE 返信失敗 status=%s body=%s", r.status_code, r.text[:200])
 
 
+RARITY_MARK = {"UR": "🌈🌈🌈", "SSR": "🌟🌟", "SR": "✨", "R": "🔹", "N": "▫️"}
+
+
+def _tarot_reply(service: FortuneService, uid: str, r) -> list[str]:
+    if not r.ok:
+        return [r.text, _premium_text(service, uid)] if r.reason == "premium_only" else [r.text]
+    head = "\n".join(f"{RARITY_MARK.get(c['rarity'], '')}【{c['rarity']}】{c['position']}: {c['label']}" for c in r.cards)
+    return [head, r.text]
+
+
 def respond(service: FortuneService, user_id: str, text: str) -> list[str]:
     """受け取った文に対する返信文を作る（送信はしない）。"""
     t = text.strip()
     uid = f"line:{user_id}"
 
     if t in ("タロット", "占って", "今日の運勢", "1枚"):
-        return [service.tarot(uid, 1).text]
+        return _tarot_reply(service, uid, service.tarot(uid, 1))
     if t in ("3枚", "三枚", "3枚引き"):
-        r = service.tarot(uid, 3)
-        return [r.text] if r.ok or r.reason != "premium_only" else [r.text, _premium_text(service, uid)]
+        return _tarot_reply(service, uid, service.tarot(uid, 3))
     if t.startswith("相談"):
         question = t[2:].strip(" :：　")
         if not question:
             return ["「相談 」のあとに悩みを書いて送ってください。\n例: 相談 転職するか迷っています"]
-        r = service.tarot(uid, 3, question)
-        return [r.text] if r.ok or r.reason != "premium_only" else [r.text, _premium_text(service, uid)]
+        return _tarot_reply(service, uid, service.tarot(uid, 3, question))
     if t.startswith(("星座", "誕生日")):
         bd = zodiac.parse_birthday(t)
         if bd:

@@ -28,6 +28,19 @@ MAJOR_ARCANA = [
     ("世界", "完成・達成・新しいステージ", "あと一歩・未完成"),
 ]
 
+# レア度は見た目の演出だけで、運勢の良し悪しとは関係ない。確率は画面にも表示する。
+RARITIES = [("UR", 0.01), ("SSR", 0.04), ("SR", 0.15), ("R", 0.30), ("N", 0.50)]
+
+
+def roll_rarity(rng: random.Random) -> str:
+    x = rng.random()
+    for name, p in RARITIES:
+        if x < p:
+            return name
+        x -= p
+    return "N"
+
+
 SPREAD_POSITIONS = {
     1: ["今日のあなた"],
     3: ["過去", "現在", "未来"],
@@ -40,6 +53,7 @@ class DrawnCard:
     name: str
     reversed: bool
     meaning: str
+    rarity: str = "N"
 
     @property
     def label(self) -> str:
@@ -54,5 +68,5 @@ def draw(count: int = 1, rng: random.Random | None = None) -> list[DrawnCard]:
     cards = []
     for position, (name, up, down) in zip(SPREAD_POSITIONS[count], picks):
         rev = rng.random() < 0.5
-        cards.append(DrawnCard(position, name, rev, down if rev else up))
+        cards.append(DrawnCard(position, name, rev, down if rev else up, roll_rarity(rng)))
     return cards

@@ -2,46 +2,108 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>月詠の占い</title>
-<meta name="description" content="AI占い師・月詠によるタロットと12星座占い。今日の1枚は無料。">
+<meta name="description" content="AI占い師・月詠のタロットガチャと12星座占い。今日の1枚は無料。">
 <style>
-  :root { --bg:#14112b; --card:#1f1b40; --text:#eee9ff; --muted:#a79fd0; --accent:#e7c46a; --line:#3a3470; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:radial-gradient(circle at 50% 0,#2b2460,var(--bg) 60%); color:var(--text);
+  :root {
+    --bg:#0d0a24; --card:#1d1840; --text:#f1ecff; --muted:#a79fd0; --accent:#ffd34d; --line:#3a3470;
+    --N:#cfd3e6; --R:#5fb4ff; --SR:#c07bff; --SSR:#ffd34d;
+    --UR:linear-gradient(120deg,#ff5f9e,#ffd34d,#5fffb0,#5fb4ff,#c07bff,#ff5f9e);
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  [hidden] { display:none !important; }
+  body { margin:0; background:radial-gradient(circle at 50% -10%,#3a2c86,var(--bg) 60%) fixed; color:var(--text);
          font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif; line-height:1.8; min-height:100vh; }
   main { max-width:560px; margin:0 auto; padding:24px 16px 64px; }
-  h1 { text-align:center; font-size:1.6rem; letter-spacing:.2em; margin:8px 0 0; color:var(--accent); }
+  h1 { text-align:center; font-size:1.7rem; letter-spacing:.2em; margin:8px 0 0; color:var(--accent);
+       text-shadow:0 0 18px rgba(255,211,77,.5); }
   .sub { text-align:center; color:var(--muted); font-size:.9rem; margin:0 0 20px; }
-  section { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin:16px 0; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px; margin:16px 0; }
   h2 { font-size:1.05rem; margin:0 0 10px; }
-  button { background:var(--accent); color:#1b1636; border:0; border-radius:999px; padding:11px 20px;
-           font-weight:700; font-size:1rem; cursor:pointer; }
+  button { background:var(--accent); color:#1b1636; border:0; border-radius:999px; padding:12px 22px;
+           font-weight:800; font-size:1rem; cursor:pointer; font-family:inherit; }
   button.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); }
-  button:disabled { opacity:.5; cursor:wait; }
+  button.big { width:100%; font-size:1.2rem; padding:16px; box-shadow:0 0 0 0 rgba(255,211,77,.6); animation:pulse 2s infinite; }
+  button:disabled { opacity:.5; cursor:wait; animation:none; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(255,211,77,.55)} 70%{box-shadow:0 0 0 14px rgba(255,211,77,0)} 100%{box-shadow:0 0 0 0 rgba(255,211,77,0)} }
   input, textarea { width:100%; background:#141130; color:var(--text); border:1px solid var(--line);
                     border-radius:10px; padding:10px; font-size:1rem; font-family:inherit; }
   textarea { min-height:80px; resize:vertical; }
   .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-  .cards { display:flex; gap:10px; justify-content:center; margin:14px 0 4px; flex-wrap:wrap; }
-  .tcard { width:92px; height:140px; border-radius:10px; border:1px solid var(--accent);
-           background:linear-gradient(160deg,#3b2f7a,#1a1540); display:flex; flex-direction:column;
-           align-items:center; justify-content:center; text-align:center; font-size:.8rem; padding:6px;
-           animation:flip .6s ease both; }
-  .tcard b { font-size:1rem; color:var(--accent); }
-  .tcard.rev b { transform:rotate(180deg); }
-  @keyframes flip { from { transform:rotateY(90deg); opacity:0 } to { transform:none; opacity:1 } }
   .result { white-space:pre-wrap; margin-top:12px; }
   .note { color:var(--muted); font-size:.8rem; }
+  .rates { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; font-size:.75rem; color:var(--muted); }
+  .rates span { border:1px solid var(--line); border-radius:6px; padding:0 6px; }
   .premium { border-color:var(--accent); }
   footer { text-align:center; font-size:.8rem; color:var(--muted); }
   footer a { color:var(--muted); }
+
+  /* ---- ガチャ演出 ---- */
+  #stage { position:fixed; inset:0; z-index:10; background:radial-gradient(circle at 50% 40%,#2a1f66,#05030f 75%);
+           display:flex; flex-direction:column; align-items:center; overflow-y:auto; padding:56px 16px 32px; }
+  #stage[hidden] { display:none; }
+  #fx { position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:12; }
+  #flash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:13; }
+  #flash.on { animation:flash .7s ease-out; }
+  @keyframes flash { 0%{opacity:.9} 100%{opacity:0} }
+  #closeX { position:fixed; top:12px; right:12px; z-index:14; background:rgba(255,255,255,.12); color:#fff; padding:6px 14px; }
+  .hint { min-height:2.4em; font-size:1.6rem; font-weight:900; letter-spacing:.1em; text-align:center; z-index:11; }
+  .hint.pop { animation:stamp .5s cubic-bezier(.2,1.6,.4,1) both; }
+  @keyframes stamp { from{transform:scale(2.6);opacity:0} to{transform:scale(1);opacity:1} }
+  .slots { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:12px 0; perspective:900px; z-index:11; }
+  .gcard { width:min(42vw,170px); aspect-ratio:2/3; position:relative; cursor:pointer; border:0; padding:0; background:none;
+           animation:drop .6s cubic-bezier(.2,1.4,.4,1) both; }
+  .slots.three .gcard { width:min(28vw,130px); }
+  @keyframes drop { from{transform:translateY(-60px) scale(.6);opacity:0} to{transform:none;opacity:1} }
+  .inner { position:absolute; inset:0; transition:transform .7s cubic-bezier(.3,1.3,.5,1); transform-style:preserve-3d; }
+  .gcard.open .inner { transform:rotateY(180deg); }
+  .face { position:absolute; inset:0; border-radius:14px; backface-visibility:hidden; display:flex; flex-direction:column;
+          align-items:center; justify-content:center; text-align:center; overflow:hidden; }
+  .back { background:repeating-conic-gradient(from 0deg,#2d2470 0 10deg,#211a58 10deg 20deg); border:2px solid #8d7fe0;
+          font-size:2.4rem; transition:box-shadow .3s, border-color .3s; }
+  .gcard.charge .back { animation:shake .12s linear infinite; }
+  @keyframes shake { 0%,100%{transform:translate(0)} 25%{transform:translate(-2px,1px) rotate(-1deg)} 75%{transform:translate(2px,-1px) rotate(1deg)} }
+  .glow-N .back { box-shadow:0 0 18px 4px var(--N); }
+  .glow-R .back { box-shadow:0 0 24px 6px var(--R); border-color:var(--R); }
+  .glow-SR .back { box-shadow:0 0 30px 10px var(--SR); border-color:var(--SR); }
+  .glow-SSR .back { box-shadow:0 0 40px 14px var(--SSR); border-color:var(--SSR); }
+  .glow-UR .back { box-shadow:0 0 50px 18px #ff5f9e, 0 0 80px 30px #5fb4ff; border-color:#fff; }
+  .front { transform:rotateY(180deg); background:linear-gradient(160deg,#3b2f7a,#140f36); border:3px solid var(--c,#fff); padding:8px; }
+  .front .num { font-size:.8rem; opacity:.7; }
+  .front .name { font-size:1.5rem; font-weight:900; color:var(--c); text-shadow:0 0 12px var(--c); line-height:1.3; }
+  .slots.three .front .name { font-size:1.05rem; }
+  .front .pos { font-size:.75rem; opacity:.8; }
+  .front .dir { font-size:.8rem; margin-top:4px; }
+  .front.rev .dir { color:#ff9ec4; }
+  .badge { position:absolute; top:6px; left:6px; font-weight:900; font-size:.85rem; padding:0 8px; border-radius:6px;
+           background:var(--c); color:#140f36; }
+  .gcard.open .badge { animation:stamp .5s .45s cubic-bezier(.2,1.6,.4,1) both; }
+  .r-UR .front { border-image:var(--UR) 1; --c:#fff; background:linear-gradient(160deg,#5b2f7a,#14305a); }
+  .r-UR .badge { background:var(--UR); }
+  .r-UR .front .name { background:var(--UR); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .tapmsg { color:var(--muted); z-index:11; animation:blink 1.2s infinite; }
+  @keyframes blink { 50%{opacity:.3} }
+  .reading { max-width:520px; width:100%; white-space:pre-wrap; background:rgba(29,24,64,.85); border:1px solid var(--line);
+             border-radius:16px; padding:16px; margin-top:8px; z-index:11; }
+  .reading[hidden] { display:none; }
+  .loading { color:var(--muted); animation:blink 1.2s infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+  }
 </style>
 </head>
 <body>
 <main>
   <h1>月詠の占い</h1>
-  <p class="sub">AI占い師・月詠があなたの今日を読み解きます</p>
+  <p class="sub">AI占い師・月詠のタロットガチャ</p>
+
+  <section>
+    <h2>🔮 今日のタロットガチャ（無料・1日1回）</h2>
+    <button id="gacha1" class="big">カードを引く</button>
+    <div class="rates" id="rates"></div>
+    <p class="note">レア度は演出です。運勢の良し悪しとは関係ありません。</p>
+  </section>
 
   <section>
     <h2>🌙 12星座の今日の運勢（無料）</h2>
@@ -50,23 +112,15 @@
     <div id="horo" class="result"></div>
   </section>
 
-  <section>
-    <h2>🔮 今日のタロット1枚（無料・1日1回）</h2>
-    <div class="row"><button id="tarot1">カードを引く</button></div>
-    <div id="cards1" class="cards"></div>
-    <div id="tarotRes1" class="result"></div>
-  </section>
-
   <section class="premium">
-    <h2>✨ プレミアム鑑定</h2>
+    <h2>✨ プレミアム 3連ガチャ鑑定</h2>
     <p class="note" id="plan">過去・現在・未来の3枚引きと、あなたの悩みに合わせた個別鑑定。</p>
     <textarea id="q" maxlength="500" placeholder="相談したいこと（例: 転職するか迷っています）"></textarea>
     <div class="row">
-      <button id="tarot3">3枚で鑑定する</button>
+      <button id="gacha3">3枚引く</button>
       <button id="buy" class="ghost" hidden>プレミアムに登録</button>
     </div>
-    <div id="cards3" class="cards"></div>
-    <div id="tarotRes3" class="result"></div>
+    <div id="msg3" class="result"></div>
   </section>
 
   <footer>
@@ -74,65 +128,269 @@
     <a href="/legal">特定商取引法に基づく表記</a>
   </footer>
 </main>
+
+<div id="stage" hidden role="dialog" aria-label="タロットガチャ">
+  <button id="closeX" aria-label="閉じる">×</button>
+  <div id="hint" class="hint"></div>
+  <div id="slots" class="slots"></div>
+  <p id="tapmsg" class="tapmsg" hidden>タップしてめくる</p>
+  <div id="reading" class="reading" hidden></div>
+  <div class="row" id="shareRow" hidden>
+    <button id="shareBtn">画像でシェア</button>
+    <button id="xBtn" class="ghost">Xに投稿</button>
+    <button id="closeBtn" class="ghost">閉じる</button>
+  </div>
+</div>
+<canvas id="fx"></canvas>
+<div id="flash"></div>
+
 <script>
 const $ = (id) => document.getElementById(id);
+const ORDER = ["N", "R", "SR", "SSR", "UR"];
+const COLOR = { N:"#cfd3e6", R:"#5fb4ff", SR:"#c07bff", SSR:"#ffd34d", UR:"#ffffff" };
+const RAINBOW = ["#ff5f9e", "#ffd34d", "#5fffb0", "#5fb4ff", "#c07bff"];
+const NAMES = ["愚者","魔術師","女教皇","女帝","皇帝","教皇","恋人","戦車","力","隠者","運命の輪","正義",
+               "吊るされた男","死神","節制","悪魔","塔","星","月","太陽","審判","世界"];
+const ROMAN = ["0","I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX","XXI"];
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const sleep = (ms) => new Promise((r) => setTimeout(r, reduceMotion ? 0 : ms));
+const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch (_) {} };
 let me = { premium:false, billing:false };
+let current = null; // { cards, text }
 
 async function post(url, data) {
-  const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(data||{}) });
+  const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(data || {}) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.detail || "エラーが発生しました");
   return j;
 }
 
-function showCards(el, cards) {
-  el.replaceChildren(...cards.map((c, i) => {
-    const d = document.createElement("div");
-    d.className = "tcard" + (c.reversed ? " rev" : "");
-    d.style.animationDelay = (i * 0.25) + "s";
-    const pos = document.createElement("span"); pos.textContent = c.position;
-    const name = document.createElement("b"); name.textContent = c.name;
-    const dir = document.createElement("span"); dir.textContent = c.reversed ? "逆位置" : "正位置";
-    d.append(pos, name, dir);
-    return d;
-  }));
+/* ---------- パーティクル ---------- */
+const fx = $("fx"), ctx = fx.getContext("2d");
+let parts = [], running = false;
+function resize() { fx.width = innerWidth * devicePixelRatio; fx.height = innerHeight * devicePixelRatio; }
+addEventListener("resize", resize); resize();
+function burst(x, y, rarity, n) {
+  if (reduceMotion) return;
+  const colors = rarity === "UR" ? RAINBOW : [COLOR[rarity], "#ffffff"];
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * (rarity === "N" ? 4 : 9);
+    parts.push({ x, y, vx:Math.cos(a) * s, vy:Math.sin(a) * s - 2, life:1, size:2 + Math.random() * 4,
+                 color:colors[i % colors.length], star:Math.random() < .3 });
+  }
+  if (!running) { running = true; requestAnimationFrame(tick); }
+}
+function tick() {
+  ctx.clearRect(0, 0, fx.width, fx.height);
+  ctx.save(); ctx.scale(devicePixelRatio, devicePixelRatio);
+  parts = parts.filter((p) => p.life > 0);
+  for (const p of parts) {
+    p.x += p.vx; p.y += p.vy; p.vy += .12; p.vx *= .99; p.life -= .012;
+    ctx.globalAlpha = Math.max(p.life, 0); ctx.fillStyle = p.color;
+    if (p.star) { ctx.font = `${p.size * 4}px sans-serif`; ctx.fillText("✦", p.x, p.y); }
+    else { ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 7); ctx.fill(); }
+  }
+  ctx.restore();
+  if (parts.length) requestAnimationFrame(tick); else { running = false; ctx.clearRect(0, 0, fx.width, fx.height); }
 }
 
-async function run(btn, fn) {
-  btn.disabled = true; const label = btn.textContent; btn.textContent = "月詠が読み解いています…";
-  try { await fn(); } catch (e) { alert(e.message); } finally { btn.disabled = false; btn.textContent = label; }
+/* ---------- 演出 ---------- */
+function setHint(text, color) {
+  const h = $("hint");
+  h.textContent = text; h.style.color = color || "#fff";
+  h.style.textShadow = `0 0 16px ${color || "#fff"}`;
+  h.classList.remove("pop"); void h.offsetWidth; h.classList.add("pop");
+}
+function flash() { if (reduceMotion) return; const f = $("flash"); f.classList.remove("on"); void f.offsetWidth; f.classList.add("on"); }
+
+function makeCard(c) {
+  const idx = NAMES.indexOf(c.name);
+  const b = document.createElement("button");
+  b.className = `gcard r-${c.rarity}`;
+  b.style.setProperty("--c", COLOR[c.rarity]);
+  b.setAttribute("aria-label", `${c.position}のカードをめくる`);
+  const inner = document.createElement("div"); inner.className = "inner";
+  const back = document.createElement("div"); back.className = "face back"; back.textContent = "🌙";
+  const front = document.createElement("div"); front.className = "face front" + (c.reversed ? " rev" : "");
+  const badge = document.createElement("div"); badge.className = "badge"; badge.textContent = c.rarity;
+  const num = document.createElement("div"); num.className = "num"; num.textContent = ROMAN[idx] ?? "";
+  const name = document.createElement("div"); name.className = "name"; name.textContent = c.name;
+  const pos = document.createElement("div"); pos.className = "pos"; pos.textContent = c.position;
+  const dir = document.createElement("div"); dir.className = "dir"; dir.textContent = c.reversed ? "逆位置" : "正位置";
+  front.append(badge, num, name, dir, pos);
+  inner.append(back, front); b.append(inner);
+  return b;
 }
 
+// 一番高いレア度に向けて、光の色を段階的に上げていく（昇格演出）
+async function charge(els, best) {
+  const top = ORDER.indexOf(best);
+  els.forEach((e) => e.classList.add("charge", "glow-N"));
+  setHint("…", "#fff");
+  await sleep(700);
+  for (let i = 1; i <= top; i++) {
+    const r = ORDER[i];
+    els.forEach((e) => { e.classList.remove(`glow-${ORDER[i - 1]}`); e.classList.add(`glow-${r}`); });
+    buzz(i >= 3 ? [40, 30, 40] : 25);
+    if (r === "SR") setHint("！？", COLOR.SR);
+    if (r === "SSR") { setHint("SSR以上確定!!", COLOR.SSR); flash(); }
+    if (r === "UR") { setHint("🌈 UR 確定 🌈", "#ff5f9e"); flash(); }
+    await sleep(r === "UR" ? 1100 : 650);
+  }
+  if (top < 2) setHint(top === 1 ? "いい感じ…！" : "", COLOR[best]);
+  els.forEach((e) => e.classList.remove("charge"));
+}
+
+function waitFlips(els, cards) {
+  return new Promise((resolve) => {
+    let left = els.length;
+    $("tapmsg").hidden = false;
+    els.forEach((el, i) => {
+      el.addEventListener("click", function open() {
+        el.removeEventListener("click", open);
+        el.classList.add("open");
+        const r = cards[i].rarity, rect = el.getBoundingClientRect();
+        setTimeout(() => {
+          burst(rect.left + rect.width / 2, rect.top + rect.height / 2, r, { N:20, R:35, SR:60, SSR:110, UR:180 }[r]);
+          buzz(ORDER.indexOf(r) >= 3 ? [60, 40, 120] : 30);
+          if (ORDER.indexOf(r) >= 3) flash();
+        }, reduceMotion ? 0 : 350);
+        if (--left === 0) { $("tapmsg").hidden = true; setTimeout(resolve, reduceMotion ? 0 : 900); }
+      });
+    });
+  });
+}
+
+async function gacha(count, btn) {
+  btn.disabled = true;
+  try {
+    const d = await post("/api/tarot/draw", { count, question: count === 3 ? $("q").value : "" });
+    if (!d.ok) {
+      if (count === 3) { $("msg3").textContent = d.text; } else { alert(d.text); }
+      return;
+    }
+    const readP = post("/api/tarot/read", { draw_id: d.draw_id }); // 演出の間にAIの鑑定文を用意
+    readP.catch(() => {});
+    current = { cards: d.cards, text: "" };
+    openStage();
+    const slots = $("slots");
+    slots.className = "slots" + (count === 3 ? " three" : "");
+    const els = d.cards.map(makeCard);
+    slots.replaceChildren(...els);
+    const best = d.cards.map((c) => c.rarity).sort((a, b) => ORDER.indexOf(b) - ORDER.indexOf(a))[0];
+    await sleep(600);
+    await charge(els, best);
+    await waitFlips(els, d.cards);
+    const rd = $("reading");
+    rd.hidden = false; rd.className = "reading loading"; rd.textContent = "月詠が読み解いています…";
+    try { const j = await readP; current.text = j.text; rd.className = "reading"; rd.textContent = j.text; }
+    catch (e) { rd.className = "reading"; rd.textContent = e.message; }
+    $("shareRow").hidden = false;
+    loadMe();
+  } catch (e) { alert(e.message); }
+  finally { btn.disabled = false; }
+}
+
+function openStage() {
+  $("hint").textContent = ""; $("reading").hidden = true; $("shareRow").hidden = true; $("tapmsg").hidden = true;
+  $("stage").hidden = false; document.body.style.overflow = "hidden"; $("stage").scrollTop = 0;
+}
+function closeStage() { $("stage").hidden = true; document.body.style.overflow = ""; }
+
+/* ---------- シェア画像（縦長 1080x1920） ---------- */
+function shareText() {
+  const cs = current.cards;
+  const main = cs.length === 1 ? `【${cs[0].rarity}】${cs[0].label}` : cs.map((c) => `${c.position}【${c.rarity}】${c.name}`).join(" / ");
+  return `今日のタロットガチャは ${main} でした🔮 #月詠の占い`;
+}
+
+function wrapText(g, text, x, y, maxW, lh, maxLines) {
+  let line = "", lines = 0;
+  for (const ch of text.replace(/\n+/g, " ")) {
+    if (g.measureText(line + ch).width > maxW) {
+      if (++lines === maxLines) { g.fillText(line.slice(0, -1) + "…", x, y); return; }
+      g.fillText(line, x, y); line = ch; y += lh;
+    } else line += ch;
+  }
+  if (line) g.fillText(line, x, y);
+}
+
+function drawCardArt(g, c, x, y, w, h) {
+  const col = c.rarity === "UR" ? null : COLOR[c.rarity];
+  const grad = g.createLinearGradient(x, y, x + w, y + h);
+  if (col) { grad.addColorStop(0, col); grad.addColorStop(1, "#ffffff"); }
+  else RAINBOW.forEach((cc, i) => grad.addColorStop(i / (RAINBOW.length - 1), cc));
+  g.save();
+  g.shadowColor = col || "#ff5f9e"; g.shadowBlur = 60;
+  g.fillStyle = "#1b1446"; g.beginPath(); g.roundRect(x, y, w, h, 28); g.fill();
+  g.shadowBlur = 0; g.lineWidth = 10; g.strokeStyle = grad; g.stroke();
+  g.textAlign = "center"; g.fillStyle = "#fff";
+  const s = w / 600;
+  g.font = `900 ${64 * s}px sans-serif`; g.fillStyle = grad; g.fillText(c.rarity, x + w / 2, y + 110 * s);
+  g.fillStyle = "rgba(255,255,255,.7)"; g.font = `${40 * s}px serif`; g.fillText(ROMAN[NAMES.indexOf(c.name)] ?? "", x + w / 2, y + h * .38);
+  g.fillStyle = grad; g.font = `900 ${Math.min(110, 560 / c.name.length) * s}px sans-serif`;
+  g.fillText(c.name, x + w / 2, y + h * .55);
+  g.fillStyle = "#fff"; g.font = `bold ${44 * s}px sans-serif`; g.fillText(c.reversed ? "逆位置" : "正位置", x + w / 2, y + h * .68);
+  g.font = `${36 * s}px sans-serif`; g.fillStyle = "rgba(255,255,255,.8)"; g.fillText(c.position, x + w / 2, y + h * .78);
+  g.restore();
+}
+
+async function makeShareImage() {
+  const W = 1080, H = 1920, cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const g = cv.getContext("2d"), cs = current.cards;
+  const bg = g.createRadialGradient(W / 2, H * .4, 50, W / 2, H * .4, H * .8);
+  bg.addColorStop(0, "#3a2c86"); bg.addColorStop(1, "#05030f");
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(255,255,255,${Math.random() * .8})`; g.beginPath(); g.arc(Math.random() * W, Math.random() * H, Math.random() * 3, 0, 7); g.fill(); }
+  g.textAlign = "center"; g.fillStyle = "#ffd34d"; g.font = "900 72px sans-serif"; g.fillText("今日のタロットガチャ", W / 2, 200);
+  const d = new Date(); g.fillStyle = "#a79fd0"; g.font = "40px sans-serif"; g.fillText(`${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`, W / 2, 270);
+  if (cs.length === 1) drawCardArt(g, cs[0], 240, 360, 600, 900);
+  else cs.forEach((c, i) => drawCardArt(g, c, 60 + i * 330, 480, 300, 450));
+  g.fillStyle = "#f1ecff"; g.font = "44px sans-serif"; g.textAlign = "left";
+  const kw = cs.map((c) => c.meaning).join(" / ");
+  wrapText(g, kw, 100, cs.length === 1 ? 1400 : 1080, W - 200, 66, 4);
+  g.textAlign = "center"; g.fillStyle = "#ffd34d"; g.font = "bold 48px sans-serif"; g.fillText("🌙 月詠の占い", W / 2, H - 170);
+  g.fillStyle = "#a79fd0"; g.font = "36px sans-serif"; g.fillText(location.host, W / 2, H - 110);
+  return new Promise((r) => cv.toBlob(r, "image/png"));
+}
+
+async function shareImage() {
+  const blob = await makeShareImage();
+  const file = new File([blob], "tarot-gacha.png", { type:"image/png" });
+  try {
+    if (navigator.canShare && navigator.canShare({ files:[file] })) {
+      await navigator.share({ files:[file], text: shareText() + " " + location.origin });
+      return;
+    }
+  } catch (e) { if (e.name === "AbortError") return; }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+/* ---------- 画面のその他 ---------- */
 async function loadMe() {
   me = await (await fetch("/api/me")).json();
   $("buy").hidden = me.premium || !me.billing;
   if (me.premium) $("plan").textContent = `プレミアム会員です。今日は ${me.used}/${me.limit} 回利用済み。`;
+  if (me.rarities) $("rates").replaceChildren(...me.rarities.map(([n, p]) => {
+    const s = document.createElement("span"); s.textContent = `${n} ${(p * 100).toFixed(p < .01 ? 1 : 0)}%`; s.style.color = COLOR[n]; return s;
+  }));
 }
 
-$("horoBtn").onclick = () => run($("horoBtn"), async () => {
-  const j = await post("/api/horoscope", { birthday: $("bd").value });
-  $("horo").textContent = j.text;
-  try { localStorage.setItem("bd", $("bd").value); } catch (_) {}
-});
+$("gacha1").onclick = () => gacha(1, $("gacha1"));
+$("gacha3").onclick = () => gacha(3, $("gacha3"));
+$("shareBtn").onclick = () => shareImage().catch((e) => alert(e.message));
+$("xBtn").onclick = () => window.open("https://twitter.com/intent/tweet?text=" + encodeURIComponent(shareText()) + "&url=" + encodeURIComponent(location.origin), "_blank", "noopener");
+$("closeBtn").onclick = closeStage; $("closeX").onclick = closeStage;
 
-$("tarot1").onclick = () => run($("tarot1"), async () => {
-  const j = await post("/api/tarot", { count: 1 });
-  if (j.ok) showCards($("cards1"), j.cards);
-  $("tarotRes1").textContent = j.text;
-  loadMe();
-});
-
-$("tarot3").onclick = () => run($("tarot3"), async () => {
-  const j = await post("/api/tarot", { count: 3, question: $("q").value });
-  if (j.ok) showCards($("cards3"), j.cards);
-  $("tarotRes3").textContent = j.text;
-  loadMe();
-});
-
-$("buy").onclick = () => run($("buy"), async () => {
-  const j = await post("/billing/checkout");
-  location.href = j.url;
-});
+$("horoBtn").onclick = async () => {
+  const b = $("horoBtn"); b.disabled = true;
+  try { const j = await post("/api/horoscope", { birthday: $("bd").value }); $("horo").textContent = j.text;
+        try { localStorage.setItem("bd", $("bd").value); } catch (_) {} }
+  catch (e) { alert(e.message); } finally { b.disabled = false; }
+};
+$("buy").onclick = async () => { try { location.href = (await post("/billing/checkout")).url; } catch (e) { alert(e.message); } };
 
 try { const v = localStorage.getItem("bd"); if (v) $("bd").value = v; } catch (_) {}
 loadMe();
