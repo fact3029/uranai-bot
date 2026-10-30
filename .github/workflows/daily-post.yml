@@ -1,0 +1,73 @@
+name: 毎朝の占い自動投稿
+
+on:
+  schedule:
+    # 日本時間 6:43（UTC 21:43）。毎時0分は混み合って遅れやすいので少しずらす
+    - cron: "43 21 * * *"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "投稿先（カンマ区切り。空なら全部）: x,threads,instagram,youtube,line"
+        required: false
+        default: ""
+      dry_run:
+        description: "作るだけで投稿しない"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# 同時に2回走って二重投稿しないようにする
+concurrency:
+  group: daily-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: 日本語フォントと ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk ffmpeg
+      - run: pip install -r requirements.txt
+      - name: 作成と投稿
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          MEDIA_PUBLIC_BASE_URL: ${{ secrets.MEDIA_PUBLIC_BASE_URL }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_BROADCAST_WEEKDAYS: ${{ vars.LINE_BROADCAST_WEEKDAYS }}
+          ONLY: ${{ inputs.only }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          args="--out out"
+          if [ -n "$ONLY" ]; then args="$args --only $ONLY"; fi
+          if [ "$DRY_RUN" = "true" ]; then args="$args --dry-run"; fi
+          python -m social.daily $args
+      # TikTok は手動投稿なので、動画と投稿文をダウンロードできるように残す
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: daily-${{ github.run_id }}
+          path: out/
+          retention-days: 7
